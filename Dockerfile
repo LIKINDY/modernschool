@@ -57,14 +57,14 @@ RUN cp .env.example .env \
     && sed -i 's/CACHE_STORE=database/CACHE_STORE=file/' .env \
     && sed -i 's/QUEUE_CONNECTION=database/QUEUE_CONNECTION=sync/' .env
 
-RUN mkdir -p database && touch database/database.sqlite
+RUN mkdir -p database && rm -f database/database.sqlite && touch database/database.sqlite
 
 RUN php artisan key:generate --force
 
-RUN php artisan migrate --force --no-interaction || true
+RUN php artisan migrate --force --no-interaction
 
 
-RUN chmod -R 775 storage bootstrap/cache
+RUN chmod -R 777 storage bootstrap/cache
 
 EXPOSE 10000
 
