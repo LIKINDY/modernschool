@@ -5,14 +5,14 @@ FROM php:8.2-cli AS builder
 RUN apt-get update && apt-get install -y \
     git \
     curl \
-    zip \
-    unzip \
-    libzip-dev \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    zip \
+    unzip \
     sqlite3 \
-    && docker-php-ext-install pdo pdo_sqlite mbstring exif pcntl bcmath gd zip \
+    libsqlite3-dev \
+    && docker-php-ext-install pdo pdo_sqlite mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -37,12 +37,16 @@ FROM php:8.2-cli
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
+    git \
+    curl \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    zip \
+    unzip \
     sqlite3 \
-    && docker-php-ext-install pdo pdo_sqlite mbstring exif pcntl bcmath gd zip \
+    libsqlite3-dev \
+    && docker-php-ext-install pdo pdo_sqlite mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -73,11 +77,10 @@ RUN php artisan config:cache \
     && php artisan view:cache || true
 
 # Set permissions
-RUN chmod -R 775 storage bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache || true
+RUN chmod -R 775 storage bootstrap/cache
 
 # Expose port
 EXPOSE 10000
 
 # Start Laravel server
-CMD php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
+CMD php artisan serve --host=0.0.0.0 --port=$PORT
