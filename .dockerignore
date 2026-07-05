@@ -1,0 +1,47 @@
+# Dependencies
+/vendor
+/node_modules
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Development tools
+.editorconfig
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+/phpunit.xml
+
+# IDE files
+/.idea
+/.vscode
+/.zed
+/.nova
+/.fleet
+
+# Build artifacts
+/public/build
+/public/hot
+
+# Storage (runtime files)
+/storage/*.key
+/storage/pail
+/storage/framework/cache/data
+/storage/framework/sessions
+/storage/framework/views
+/storage/logs
+
+# Temp scripts
+fix_secret.ps1
+build.sh
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,60 +1,53 @@
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM php:8.2-cli AS builder
+FROM php:8.2-cli-bookworm AS builder
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
     git \
     curl \
+    zip \
+    unzip \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
-    zip \
-    unzip \
-    sqlite3 \
+    libzip-dev \
     libsqlite3-dev \
-    && docker-php-ext-install pdo pdo_sqlite mbstring exif pcntl bcmath gd \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    sqlite3 \
+    && docker-php-ext-install pdo pdo_sqlite mbstring bcmath gd zip \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Copy composer files first (layer caching)
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies (no dev)
 RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction --prefer-dist
 
-# Copy rest of application
 COPY . .
 
-# Run composer scripts (post-install)
 RUN composer run-script post-autoload-dump --no-interaction || true
 
-# ─── Stage 2: Production Image ────────────────────────────────────────────────
-FROM php:8.2-cli
+# ─── Stage 2: Production ──────────────────────────────────────────────────────
+FROM php:8.2-cli-bookworm
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
-    zip \
-    unzip \
-    sqlite3 \
+    libzip-dev \
     libsqlite3-dev \
-    && docker-php-ext-install pdo pdo_sqlite mbstring exif pcntl bcmath gd \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    sqlite3 \
+    && docker-php-ext-install pdo pdo_sqlite mbstring bcmath gd zip \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy app from builder
 COPY --from=builder /app /app
 
-# Setup environment
 RUN cp .env.example .env \
     && sed -i 's/APP_ENV=local/APP_ENV=production/' .env \
     && sed -i 's/APP_DEBUG=true/APP_DEBUG=false/' .env \
@@ -62,25 +55,16 @@ RUN cp .env.example .env \
     && sed -i 's/CACHE_STORE=database/CACHE_STORE=file/' .env \
     && sed -i 's/QUEUE_CONNECTION=database/QUEUE_CONNECTION=sync/' .env
 
-# Create SQLite database
 RUN mkdir -p database && touch database/database.sqlite
 
-# Generate app key
 RUN php artisan key:generate --force
 
-# Run migrations
 RUN php artisan migrate --force --no-interaction || true
 
-# Cache config, routes, views
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache || true
+RUN php artisan config:cache && php artisan route:cache || true
 
-# Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
-# Expose port
 EXPOSE 10000
 
-# Start Laravel server
 CMD php artisan serve --host=0.0.0.0 --port=$PORT
