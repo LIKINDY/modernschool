@@ -47,6 +47,8 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY --from=builder /app /app
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 RUN cp .env.example .env \
     && sed -i 's/APP_ENV=local/APP_ENV=production/' .env \
@@ -61,10 +63,9 @@ RUN php artisan key:generate --force
 
 RUN php artisan migrate --force --no-interaction || true
 
-RUN php artisan config:cache && php artisan route:cache || true
 
 RUN chmod -R 775 storage bootstrap/cache
 
 EXPOSE 10000
 
-CMD php artisan serve --host=0.0.0.0 --port=$PORT
+CMD ["/start.sh"]
